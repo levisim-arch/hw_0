@@ -33,8 +33,19 @@ def index(request):
     context = {}
     return render(request, 'app/index.html', context)
 
+def time_view(request):
+    """Return the current CST time as HH:MM."""
+    now = datetime.now(CDT)
+    return HttpResponse(now.strftime("%H:%M"))
 
-
+def sum_view(request):
+    """Return {n1 + n2}"""
+    n1 = float(request.GET.get("n1", 0))
+    n2 = float(request.GET.get("n2", 0))
+    total = n1 + n2
+    if total.is_integer():
+        total = int(total)
+    return JsonResponse({"sum": total})
 # ---------------------------------------------------------------------------
 # HW4  — user creation
 # ---------------------------------------------------------------------------
