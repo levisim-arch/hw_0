@@ -1,0 +1,1 @@
+The LLMs' version is similar to mine but includes methods and helper functions that may assist with the functionality of the app beyond what I produced. I think it is probably easier to implement the AI version because it reads as mine with more defined parameters that I didn't know existed.
