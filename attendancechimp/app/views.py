@@ -95,7 +95,130 @@ def createUser(request):
 # HW5  — courses, lectures, QR uploads, dump
 # ---------------------------------------------------------------------------
 
+def _instructor_profile(user):
+    """The InstructorProfile of a logged-in instructor, else None."""
+    if not user.is_authenticated:
+        return None
+    return InstructorProfile.objects.filter(user=user).first()
+ 
+ 
+def _student_profile(user):
+    """The StudentProfile of a logged-in student, else None."""
+    if not user.is_authenticated:
+        return None
+    return StudentProfile.objects.filter(user=user).first()
 
+@require_GET
+def new_course(request):
+    return render(request, "app/new_course.html")
+ 
+ 
+@require_GET
+def new_lecture(request):
+    courses = Course.objects.order_by("course")
+    return render(request, "app/new_lecture.html", {"courses": courses})
+ 
+ 
+@require_GET
+def new_qr_upload(request):
+    return render(request, "app/new_qr_upload.html")
+
+# api endpoints
+DAY_FIELDS = [("day-mon", "Mon"), ("day-tue", "Tue"), ("day-wed", "Wed"),
+              ("day-thu", "Thu"), ("day-fri", "Fri")]
+ 
+ 
+def _checked(request, field):
+    """True if a checkbox-style POST field was sent (browser sends 'on')."""
+    value = request.POST.get(field)
+    return value is not None and value.strip().lower() not in ("", "0", "false", "off")
+ 
+ 
+@csrf_exempt
+@require_POST
+def createCourse(request):
+    """Instructor only. Creates a Course from the new_course form fields."""
+    instructor = _instructor_profile(request.user)
+    if instructor is None:
+        return HttpResponse("Instructor login required.", status=401)
+ 
+    name = request.POST.get("course-name", "").strip()
+    start = request.POST.get("start-time", "").strip()
+    end = request.POST.get("end-time", "").strip()
+    days = [label for field, label in DAY_FIELDS if _checked(request, field)]
+ 
+    if not (name and start and end and days):
+        return HttpResponse("course-name, start-time, end-time and at least one day are required.",
+                            status=400)
+    if len(name) > 100 or len(start) > 20 or len(end) > 20:
+        return HttpResponse("A field is too long.", status=400)
+ 
+    schedule = f"{','.join(days)} {start}-{end}"   # e.g. "Mon,Wed 10:00-11:15"
+ 
+    try:
+        course = Course.objects.filter(course=name).first()
+        if course is None:
+            # Course.course is unique and is what createLecture's `choice` refers to.
+            Course.objects.create(course=name, course_name=name, department="",
+                                  meeting_schedule=schedule, instructor=instructor)
+        elif course.instructor_id == instructor.id:
+            course.meeting_schedule = schedule   # same instructor re-submitting: update, still 200
+            course.save()
+        else:
+            return HttpResponse("A course with that name already exists.", status=409)
+    except IntegrityError:
+        return HttpResponse("A course with that name already exists.", status=409)
+    return HttpResponse("Course saved.", status=200)
+ 
+ 
+@csrf_exempt
+@require_POST
+def createLecture(request):
+    """Instructor only. Creates a Lecture (with a random QR identifier) for the chosen course."""
+    if _instructor_profile(request.user) is None:
+        return HttpResponse("Instructor login required.", status=401)
+ 
+    choice = request.POST.get("choice", "").strip()
+    if not choice:
+        return HttpResponse("choice is required.", status=400)
+ 
+    course = (Course.objects.filter(course=choice).first()
+              or Course.objects.filter(course_name=choice).first())
+    if course is None:
+        return HttpResponse("No such course.", status=404)
+ 
+    Lecture.objects.create(date=datetime.now(CDT),
+                           qr_identifier=secrets.token_urlsafe(12),  # random, unique in practice
+                           course_id=course)   # (the FK field is literally named course_id)
+    return HttpResponse("Lecture created.", status=200)
+ 
+ 
+@csrf_exempt
+@require_POST
+def createQRCodeUpload(request):
+    """Student only. Records that the logged-in student uploaded a QR-code image."""
+    student = _student_profile(request.user)
+    if student is None:
+        return HttpResponse("Student login required.", status=401)
+ 
+    if request.FILES.get("imageUpload") is None:
+        return HttpResponse("imageUpload file is required.", status=400)
+ 
+    QRCodeUpload.objects.create(lecture=None,
+                                upload_time=datetime.now(CDT).strftime("%Y-%m-%d %H:%M:%S"),
+                                student=student)
+    return HttpResponse("Upload recorded.", status=200)
+ 
+ 
+@require_GET
+def dumpUploads(request):
+    """Instructor only. JSON list of {"username", "upload_time"} for every upload."""
+    if _instructor_profile(request.user) is None:
+        return HttpResponse("Instructor login required.", status=401)
+ 
+    rows = QRCodeUpload.objects.select_related("student__user").order_by("id")
+    data = [{"username": r.student.user.username, "upload_time": r.upload_time} for r in rows]
+    return JsonResponse(data, safe=False)
 
 # ---------------------------------------------------------------------------
 # HW6  — getUploads

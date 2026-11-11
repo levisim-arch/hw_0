@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>New Lecture</title>
+  <style>
+    body { text-align: center; font-family: Arial, sans-serif; margin: 40px; }
+    label { display: inline-block; margin: 0.3rem 0; }
+  </style>
+</head>
+<body>
+  <h1>New Lecture</h1>
+  <form method="post" action="/app/createLecture">
+    {% csrf_token %}
+    <label>Course:
+      <select name="choice" required>
+        {% for c in courses %}
+          <option value="{{ c.course }}">{{ c.course }}</option>
+        {% empty %}
+          <option value="" disabled selected>No courses yet</option>
+        {% endfor %}
+      </select>
+    </label><br>
+    <button type="submit">Create Lecture</button>
+  </form>
+  <p><a href="/app/">Home</a></p>
+</body>
+</html>
