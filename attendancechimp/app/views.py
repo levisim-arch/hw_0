@@ -4,7 +4,17 @@ views.py — HTTP request handlers for AttendanceChimp.
 Each view corresponds to one URL endpoint.  Views receive an HTTP request,
 interact with the database via models.py, and return an HTTP response.
 """
+import secrets
 
+from django.contrib.auth import login
+from django.contrib.auth.models import User
+from django.db import IntegrityError, transaction
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET, require_POST
+
+from .models import Course, InstructorProfile, Lecture, QRCodeUpload, StudentProfile
 from django.shortcuts import render, redirect
 from django.http import (HttpResponse, HttpResponseForbidden,
                          HttpResponseBadRequest, JsonResponse)
@@ -14,6 +24,7 @@ from django.contrib.auth import authenticate, login
 from django.views.decorators.http import require_GET, require_POST
 from datetime import datetime
 from .models import Course, InstructorProfile, Lecture, QRCodeUpload, StudentProfile
+from django.db import IntegrityError, transaction
 import zoneinfo
 import json
 import io
