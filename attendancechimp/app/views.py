@@ -13,6 +13,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login
 from django.views.decorators.http import require_GET, require_POST
 from datetime import datetime
+from .models import Course, InstructorProfile, Lecture, QRCodeUpload, StudentProfile
 import zoneinfo
 import json
 import io
