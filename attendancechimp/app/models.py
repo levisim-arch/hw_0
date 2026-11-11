@@ -56,7 +56,7 @@ class InstructorProfile(models.Model):
 
 class Course(models.Model):
     '''Taught by an instructor, linked to students through enrollment table'''
-    course = models.CharField(unique=True)
+    course = models.CharField(unique=True, max_length=100)
     course_name = models.CharField(max_length=100)
     department = models.CharField(max_length=100)
     meeting_schedule = models.CharField(max_length=100)
